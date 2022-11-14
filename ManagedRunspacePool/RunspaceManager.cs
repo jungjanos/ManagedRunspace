@@ -48,34 +48,61 @@ namespace ManagedRunspacePool2
             Task.Run(Process);
         }
 
-
         // ToDo: push cancellation, track queue completed !!!
         // catch exceptions
         private async Task Process()
         {
+            var renewTimer = WaitForNextRenew();
+            var itemWaiter = WaitForNext();
+            var completionWaiter = WaitForComplete();
+
             while (true)
             {
-                bool shouldDelay = true;
-                
-                if (_periodicRenewSet)
-                {
-                    RenewRunspace();
-                    shouldDelay = false;
-                }
-                
-                if (_psInvocationQueue.TryDequeue(out InvocationDetails invocationDetails))
-                {
-                    var script = invocationDetails.Script;
-                    var tcs = invocationDetails.TaskCompletionSource;
+                await Task.WhenAny(completionWaiter, renewTimer, itemWaiter);
 
-                    var result = _runspaceProxy.Invoke(script);
-                    tcs.SetResult(result);
-                    shouldDelay = false;
+                if (completionWaiter.IsCompleted)
+                {
+                    await completionWaiter;
+                    break; // queue gracefully finished
                 }
 
-                if (shouldDelay)
-                    await Task.Delay(10);
+                if (renewTimer.IsCompleted)
+                {
+                    RenewRunspace();                    
+                    renewTimer = WaitForNextRenew();
+                }
+
+                if (itemWaiter.IsCompleted)
+                {
+                    var queueStatus = await itemWaiter;
+                    itemWaiter?.Dispose();
+
+                    if (queueStatus)
+                    {
+                        if (_psInvocationQueue.TryDequeue(out InvocationDetails invocationDetails))
+                        {
+                            var script = invocationDetails.Script;
+                            var tcs = invocationDetails.TaskCompletionSource;
+                            var clientCancel = invocationDetails.ClientCancellation;
+
+                            if (clientCancel.IsCancellationRequested)                            
+                                tcs.TrySetCanceled(clientCancel);
+                            
+                            else
+                            {
+                                var result = _runspaceProxy.Invoke(script);
+                                tcs.SetResult(result);
+                            }
+                        }
+
+                        itemWaiter = WaitForNext();
+                    }     
+                }
             }
+
+            Task WaitForComplete() => _psInvocationQueue.Completion;
+            Task WaitForNextRenew() => Settings.CreateRenewTimer();
+            Task<bool> WaitForNext() => _psInvocationQueue.WaitToReadAsync().AsTask(); // ToDo Do we need AsTask() ??? Any chance for double awaition?
         }
 
         void RenewRunspace()
@@ -86,7 +113,6 @@ namespace ManagedRunspacePool2
             // ToDo insert RS factory from settings
             _runspaceProxy = RunspaceProxy.Create(Name, DateTimeOffset.Now, null);
         }
-        bool _periodicRenewSet => Settings.RenewInterval != null;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -96,8 +122,8 @@ namespace ManagedRunspacePool2
                 {
                     // TODO: dispose managed state (managed objects)
                     _runspaceProxy?.Dispose();
-                }               
-                
+                }
+
                 _disposedValue = true;
                 _runspaceProxy = null;
             }
@@ -116,5 +142,19 @@ namespace ManagedRunspacePool2
         public static RunspaceManagerSettings Defaults = new RunspaceManagerSettings { };
 
         public TimeSpan? RenewInterval { get; set; }
-    }    
+    }
+
+    static class RunspaceManagerSettingsExt
+    {
+        static Task _never = new TaskCompletionSource<bool>().Task; // never completes
+
+        public static Task CreateRenewTimer(this RunspaceManagerSettings settings)
+            =>
+            settings.RenewInterval.HasValue
+            ? Task.Delay(settings.RenewInterval.Value)
+            : _never;
+
+        public static bool IsPeriodicRenewConfigured(this RunspaceManagerSettings settings)
+            => settings.RenewInterval != null;
+    }
 }

@@ -23,7 +23,7 @@ namespace ManagedRunspacePool2
 
 
 
-        // push cancellation
+        // ToDo => optimize away async-await
         public async Task QueueAsync(InvocationDetails details, CancellationToken cancel)
         {
             while (true)
@@ -38,6 +38,11 @@ namespace ManagedRunspacePool2
         }
 
         public bool TryDequeue(out InvocationDetails item)
-            => _channel.Reader.TryRead(out item);        
+            => _channel.Reader.TryRead(out item);
+
+        public ValueTask<bool> WaitToReadAsync(CancellationToken cancel = default) =>
+            _channel.Reader.WaitToReadAsync(cancel);
+
+        public Task Completion => _channel.Reader.Completion;
     }
 }

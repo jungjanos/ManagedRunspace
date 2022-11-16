@@ -74,9 +74,12 @@ namespace Tests
         [TestMethod]
         public void Activate_object_in_other_Appdomain()
         {
+
+            var baseDir = Thread.GetDomain().BaseDirectory;
+
             var ads = new AppDomainSetup
             {
-                ApplicationBase = @"C:\PROG\Appdomains\Tests\bin\Debug\net472",
+                ApplicationBase = baseDir,
             };
 
             AppDomain ad2 = AppDomain.CreateDomain("ad2", null, ads);
@@ -95,9 +98,11 @@ namespace Tests
         {
             // create appdomain, create and use proxy
             var t = typeof(MarshalByRefType);
+
+            var baseDir = Thread.GetDomain().BaseDirectory;
             var ads = new AppDomainSetup
             {
-                ApplicationBase = @"C:\PROG\Appdomains\Tests\bin\Debug\net472",
+                ApplicationBase = baseDir,
             };
 
             AppDomain ad2 = AppDomain.CreateDomain("ad2", null, ads);
@@ -118,9 +123,11 @@ namespace Tests
         {
             // Create separate Appdomains, create proxies
             var t = typeof(ClassWithStaticState);
+
+            var baseDir = Thread.GetDomain().BaseDirectory;
             var ads = new AppDomainSetup
             {
-                ApplicationBase = @"C:\PROG\Appdomains\Tests\bin\Debug\net472",
+                ApplicationBase = baseDir,
             };
 
             AppDomain ad1 = AppDomain.CreateDomain("ad1", null, ads);
@@ -171,9 +178,10 @@ namespace Tests
             long allocations_using_current_appdomain_2 = GC.GetTotalMemory(true);
             Trace.WriteLine($"Current allocation (bytes): {allocations_using_current_appdomain_2}");
 
+            var baseDir = Thread.GetDomain().BaseDirectory;
             var ads = new AppDomainSetup
             {
-                ApplicationBase = @"C:\PROG\Appdomains\Tests\bin\Release\net472",
+                ApplicationBase = baseDir,
             };
 
             // Create a lot of appdomains 

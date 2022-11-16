@@ -40,17 +40,19 @@ namespace ManagedRunspacePool2
             return obj;
         }
 
-        private void Start()
+        private void Start(CancellationToken cancel = default)
         {
+            cancel.ThrowIfCancellationRequested();
+
             RenewRunspace();
 
             // insert cancellation, pin TCS
-            Task.Run(Process);
+            Task.Run(() => Process(cancel));
         }
 
         // ToDo: push cancellation, track queue completed !!!
         // catch exceptions
-        private async Task Process()
+        private async Task Process(CancellationToken cancel)
         {
             var renewTimer = WaitForNextRenew();
             var itemWaiter = WaitForNext();

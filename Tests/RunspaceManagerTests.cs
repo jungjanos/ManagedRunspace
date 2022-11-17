@@ -32,7 +32,7 @@ namespace Tests
         }
 
         [TestMethod]
-        public async Task State()
+        public async Task Scripts_by_default_are_using_global_scope()
         {
             using (var manager = RunspaceManager.Create("manager1"))
             {
@@ -42,5 +42,19 @@ namespace Tests
                 Assert.AreEqual(5, res2.Results[0].ImmediateBaseObject);
             }
         }
+
+        [TestMethod]
+        public async Task Adding_item_to_completed_PsInvocationQueue_return_false()
+        {
+            var queue = new PsInvocationQueue();
+            var item1 = new InvocationContext("script1", false, new TaskCompletionSource<PsResult>(), default);
+            var item2 = new InvocationContext("script2", false, new TaskCompletionSource<PsResult>(), default);
+
+            await queue.QueueAsync(item1, default);
+
+            queue.Complete();
+            Assert.IsFalse(await queue.QueueAsync(item2, default));
+        }
+
     }
 }

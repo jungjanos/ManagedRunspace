@@ -1,5 +1,7 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using ManagedRunspacePool2;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.Win32;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation;
@@ -189,6 +191,49 @@ namespace Tests
             ps2.Dispose();
 
             Assert.IsNull(res2.First());
+        }
+
+        //[TestMethod]
+        //public async Task RunspaceManager_with_Init_and_ClosingScript()
+        //{
+        //    using (var manager = RunspaceManager.Create("manager1", new RunspaceManagerSettings
+        //    {
+        //        InitScript = "$init= $true",
+        //        ClosingScript = "$closed = $true",
+        //        RenewInterval = TimeSpan.FromSeconds(30),
+        //    }))
+        //    {
+        //        await Task.Delay(TimeSpan.FromSeconds(300));
+        //    };
+        //}
+
+        [TestMethod]
+        public async Task RunspaceManager_closing()
+        {
+            var script = "Start-Sleep -Seconds 1; Write-Output $init";
+
+            var cts = new CancellationTokenSource(2000);
+
+            using (var manager = RunspaceManager.Create("manager1", new RunspaceManagerSettings
+            {
+                InitScript = "$init= 5",
+                ClosingScript = "$closed = $true",
+                RenewInterval = TimeSpan.FromSeconds(10),
+            }, cts.Token))
+            {
+                var tasks = Enumerable.Range(1, 20).Select
+                    (_ => Task.Run(async () => await manager.InvokeAsync(script)))
+                    .ToArray();
+                PsResult[] results;
+
+                try
+                {
+                      results = await Task.WhenAll(tasks);
+                }
+                catch (Exception ex)
+                { 
+                }
+            }
         }
     }
 }

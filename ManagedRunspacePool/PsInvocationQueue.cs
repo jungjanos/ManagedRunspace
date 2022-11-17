@@ -6,7 +6,7 @@ namespace ManagedRunspacePool2
 {
     public class PsInvocationQueue
     {
-        Channel<InvocationDetails> _channel;
+        Channel<InvocationContext> _channel;
         const int DEFAULT_CAPACITY = 1;
         public PsInvocationQueue()
         {
@@ -17,34 +17,31 @@ namespace ManagedRunspacePool2
                 SingleWriter = false,
             };
             
-            _channel = Channel.CreateBounded<InvocationDetails>(options);
-        }
-        // ToDo: set Complete on queue
+            _channel = Channel.CreateBounded<InvocationContext>(options);
+        }        
 
-
-
-        // ToDo => optimize away async-await
-        public async Task QueueAsync(InvocationDetails details, CancellationToken cancel)
+        public async Task<bool> QueueAsync(InvocationContext details, CancellationToken cancel)
         {
             while (true)
             {
                 cancel.ThrowIfCancellationRequested();
 
                 if (_channel.Writer.TryWrite(details))
-                    return;
-
-                await _channel.Writer.WaitToWriteAsync(cancel);
+                    return true;                
+                
+                if (!await _channel.Writer.WaitToWriteAsync(cancel))
+                    return false;
             }
         }
 
         public void Complete() => _channel.Writer.TryComplete();
 
-        public bool TryDequeue(out InvocationDetails item)
+        public bool TryDequeue(out InvocationContext item)
             => _channel.Reader.TryRead(out item);
 
-        public ValueTask<bool> WaitToReadAsync(CancellationToken cancel = default) =>
-            _channel.Reader.WaitToReadAsync(cancel);
+        public ValueTask<bool> WaitToReadAsync(CancellationToken cancel = default) 
+            => _channel.Reader.WaitToReadAsync(cancel);
 
         public Task Completion => _channel.Reader.Completion;
-    }
+    }    
 }

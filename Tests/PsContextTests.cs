@@ -55,7 +55,7 @@ namespace Tests
 
             proxy.Init();
 
-            var result = proxy.Invoke("Get-Host", false);
+            var result = proxy.Invoke("Get-Host");
 
             Trace.WriteLine($"Returned {result.Results.Count} results");
             proxy.Dispose();
@@ -89,7 +89,7 @@ namespace Tests
 
             proxy.Init();
 
-            var result = proxy.Invoke("Get-Host", false);
+            var result = proxy.Invoke("Get-Host");
 
             Trace.WriteLine($"Returned {result.Results.Count} results");
             proxy.Dispose();

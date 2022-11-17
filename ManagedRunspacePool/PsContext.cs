@@ -32,16 +32,16 @@ namespace ManagedRunspacePool2
                 _psRunspace.Open();
         }
 
-        public PsResult Invoke(string psScript, bool useLocalScope)
+        public PsResult Invoke(Script script)
         {
             using (var ps = PowerShell.Create())
             {
                 ps.Runspace = _psRunspace;
 
-                if (useLocalScope)
-                    ps.AddScript(psScript, useLocalScope: useLocalScope);
+                if (script.UseLocalScope)
+                    ps.AddScript(script.ScriptText, useLocalScope: script.UseLocalScope);
                 else
-                    ps.AddScript(psScript);
+                    ps.AddScript(script.ScriptText);
 
                 Collection <PSObject> results = null;
                 object[] errors = null;

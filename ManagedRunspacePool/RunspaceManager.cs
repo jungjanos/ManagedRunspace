@@ -21,19 +21,35 @@ namespace ManagedRunspacePool2
             Settings = settings ?? RunspaceManagerSettings.Defaults;
             _psInvocationQueue = new PsInvocationQueue();
             _cancel = cancel;
-            _cancel.Register(() =>_psInvocationQueue.Complete());
+
+            _cancel.Register(() => _psInvocationQueue.Complete());
         }
 
+        // ToDo inconsistent cancelation results when
+        // manager is already shutting down but receives invocation
+        // invocation is already in the queue but manager deceides to shut down
         public async Task<PsResult> InvokeAsync(string script, bool useLocalScope = false, CancellationToken cancel = default)
         {
-            cancel.ThrowIfCancellationRequested();
+            var tcs = new TaskCompletionSource<PsResult>();
 
-            var details = new InvocationDetails(script, useLocalScope, new TaskCompletionSource<PsResult>(), cancel);
+            if (_cancel.IsCancellationRequested) // Manager is shutting down, ingest is closed 
+                tcs.SetException(new InvalidOperationException($"{nameof(RunspaceManager)} is already shutting down"));
 
-            await _psInvocationQueue.QueueAsync(details, cancel);
+            else if (cancel.IsCancellationRequested) // client originated cancellation            
+                tcs.SetCanceled();
 
-            return await details.TaskCompletionSource.Task;
+            else // prepare and queue command
+            {
+                var details = new InvocationContext(script, useLocalScope, tcs, cancel);
+                var queuingSuccess = await _psInvocationQueue.QueueAsync(details, cancel);
+
+                if (!queuingSuccess)
+                    tcs.SetException(new InvalidOperationException($"{nameof(RunspaceManager)} is already shutting down"));
+            }
+
+            return await tcs.Task;
         }
+
 
         public static RunspaceManager Create(string name, RunspaceManagerSettings settings = null, CancellationToken cancel = default)
         {
@@ -48,21 +64,27 @@ namespace ManagedRunspacePool2
 
             RenewRunspace();
 
-            // insert cancellation, pin TCS
             Task.Run(Process);
         }
 
-        // ToDo: push cancellation, track queue completed !!!
+        // ToDo: push cancellation, !!!
         // catch exceptions
         private async Task Process()
         {
             var renewTimer = WaitForNextRenew();
             var itemWaiter = WaitForNext();
             var completionWaiter = WaitForComplete();
+            var abortWaiter = GetAbortWaiter();
 
             while (true)
             {
-                await Task.WhenAny(completionWaiter, renewTimer, itemWaiter);
+                await Task.WhenAny(abortWaiter, completionWaiter, renewTimer, itemWaiter);
+
+                if (abortWaiter.IsCompleted)
+                {
+                    TryAbortInvocations();
+                    break;
+                }
 
                 if (completionWaiter.IsCompleted)
                 {
@@ -72,7 +94,8 @@ namespace ManagedRunspacePool2
 
                 if (renewTimer.IsCompleted)
                 {
-                    RenewRunspace();                    
+                    CloseRunspace();
+                    RenewRunspace();
                     renewTimer = WaitForNextRenew();
                 }
 
@@ -83,31 +106,58 @@ namespace ManagedRunspacePool2
 
                     if (queueStatus)
                     {
-                        if (_psInvocationQueue.TryDequeue(out InvocationDetails invocationDetails))
+                        if (_psInvocationQueue.TryDequeue(out InvocationContext invocationDetails))
                         {
                             var script = invocationDetails.Script;
                             var tcs = invocationDetails.TaskCompletionSource;
                             var clientCancel = invocationDetails.ClientCancellation;
-                            bool localScopeSet = invocationDetails.UseLocalScope;
 
-                            if (clientCancel.IsCancellationRequested)                            
+                            if (clientCancel.IsCancellationRequested)
                                 tcs.TrySetCanceled(clientCancel);
-                            
+
                             else
                             {
-                                var result = _runspaceProxy.Invoke(script, localScopeSet);
+                                var result = _runspaceProxy.Invoke(script);
                                 tcs.SetResult(result);
                             }
                         }
 
                         itemWaiter = WaitForNext();
-                    }     
+                    }
                 }
             }
 
-            Task WaitForComplete() => _psInvocationQueue.Completion;
+            CloseRunspace();
+
+            // wait for graceful completion of processing
+            Task WaitForComplete() => _psInvocationQueue.Completion;            
+            
             Task WaitForNextRenew() => Settings.CreateRenewTimer();
-            Task<bool> WaitForNext() => _psInvocationQueue.WaitToReadAsync().AsTask(); // ToDo Do we need AsTask() ??? Any chance for double awaition?
+            
+            Task<bool> WaitForNext() => _psInvocationQueue.WaitToReadAsync().AsTask(); // ToDo Do we need AsTask() ??? Any chance for double awaition?            
+
+            // wait for processing abortion deadline. (RunspaceManager's cancel + grace period) 
+            Task GetAbortWaiter()
+            {
+                var tcs = new TaskCompletionSource<bool>();
+
+                _cancel.Register(async () =>
+                {
+                    await Task.Delay(Settings.ShutdownGracePeriod ?? TimeSpan.Zero);
+                    tcs.SetResult(true);
+                });
+
+                return tcs.Task;
+            };
+        }
+
+        void CloseRunspace()
+        {
+            if (Settings.ClosingScript != null && _runspaceProxy != null)
+                _runspaceProxy?.Invoke(Settings.ClosingScript);
+
+            _runspaceProxy?.Dispose();
+            _runspaceProxy = null;
         }
 
         void RenewRunspace()
@@ -115,8 +165,16 @@ namespace ManagedRunspacePool2
             _runspaceProxy?.Dispose();
             _runspaceProxy = null;
 
-            // ToDo insert RS factory from settings
-            _runspaceProxy = RunspaceProxy.Create(Name, DateTimeOffset.Now, null);
+            _runspaceProxy = RunspaceProxy.Create(Name, DateTimeOffset.Now, Settings.RunspaceFactory);
+
+            if (Settings.InitScript != null)
+                _runspaceProxy.Invoke(Settings.InitScript);
+        }
+
+        private void TryAbortInvocations()
+        {
+            while(_psInvocationQueue.TryDequeue(out InvocationContext invocation))            
+                invocation.TaskCompletionSource.TrySetException(new TaskCanceledException($"Invocation processing aborted due to {nameof(RunspaceManager)} shutting down"));
         }
 
         protected virtual void Dispose(bool disposing)
@@ -140,26 +198,5 @@ namespace ManagedRunspacePool2
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-    }
-
-    public class RunspaceManagerSettings
-    {
-        public static RunspaceManagerSettings Defaults = new RunspaceManagerSettings { };
-
-        public TimeSpan? RenewInterval { get; set; }
-    }
-
-    static class RunspaceManagerSettingsExt
-    {
-        static Task _never = new TaskCompletionSource<bool>().Task; // never completes
-
-        public static Task CreateRenewTimer(this RunspaceManagerSettings settings)
-            =>
-            settings.RenewInterval.HasValue
-            ? Task.Delay(settings.RenewInterval.Value)
-            : _never;
-
-        public static bool IsPeriodicRenewConfigured(this RunspaceManagerSettings settings)
-            => settings.RenewInterval != null;
     }
 }

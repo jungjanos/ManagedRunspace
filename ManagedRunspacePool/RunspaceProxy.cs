@@ -2,8 +2,6 @@
 using System.IO;
 using System.Management.Automation.Runspaces;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ManagedRunspacePool2
 {
@@ -75,11 +73,9 @@ namespace ManagedRunspacePool2
             => $"{ownerKey}.{timestamp.ToUnixTimeMilliseconds()}";
 
 
-        public PsResult Invoke(string psScript, bool useLocalScope)
-        {
-            psScript = !string.IsNullOrEmpty(psScript) ? psScript : throw new ArgumentNullException(nameof(psScript));
-            return _proxy.Invoke(psScript, useLocalScope: useLocalScope);
-        }
+        public PsResult Invoke(Script script)                    
+            => _proxy.Invoke(script);        
+
 
         protected virtual void Dispose(bool disposing)
         {
@@ -112,21 +108,5 @@ namespace ManagedRunspacePool2
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
-    }
-
-    public class InvocationDetails
-    {
-        public InvocationDetails(string script, bool useLocalScope, TaskCompletionSource<PsResult> taskCompletionSource, CancellationToken clientCancellation)
-        {
-            Script = script;
-            UseLocalScope = useLocalScope;
-            TaskCompletionSource = taskCompletionSource;
-            ClientCancellation = clientCancellation;
-        }
-
-        public string Script { get; }
-        public bool UseLocalScope { get; }
-        public CancellationToken ClientCancellation { get; }
-        public TaskCompletionSource<PsResult> TaskCompletionSource { get; }
     }
 }

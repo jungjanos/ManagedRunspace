@@ -30,5 +30,17 @@ namespace Tests
                 var results = await Task.WhenAll(tasks);
             }
         }
+
+        [TestMethod]
+        public async Task State()
+        {
+            using (var manager = RunspaceManager.Create("manager1"))
+            {
+                await manager.InvokeAsync("$a = 5; Write-Output $a");
+                var res2 = await manager.InvokeAsync("Write-Output $a");
+
+                Assert.AreEqual(5, res2.Results[0].ImmediateBaseObject);
+            }
+        }
     }
 }

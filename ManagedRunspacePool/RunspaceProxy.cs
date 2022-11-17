@@ -75,10 +75,10 @@ namespace ManagedRunspacePool2
             => $"{ownerKey}.{timestamp.ToUnixTimeMilliseconds()}";
 
 
-        public PsResult Invoke(string psScript)
+        public PsResult Invoke(string psScript, bool useLocalScope)
         {
             psScript = !string.IsNullOrEmpty(psScript) ? psScript : throw new ArgumentNullException(nameof(psScript));
-            return _proxy.Invoke(psScript);
+            return _proxy.Invoke(psScript, useLocalScope: useLocalScope);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -116,14 +116,16 @@ namespace ManagedRunspacePool2
 
     public class InvocationDetails
     {
-        public InvocationDetails(string script, TaskCompletionSource<PsResult> taskCompletionSource, CancellationToken clientCancellation)
+        public InvocationDetails(string script, bool useLocalScope, TaskCompletionSource<PsResult> taskCompletionSource, CancellationToken clientCancellation)
         {
             Script = script;
+            UseLocalScope = useLocalScope;
             TaskCompletionSource = taskCompletionSource;
             ClientCancellation = clientCancellation;
         }
 
         public string Script { get; }
+        public bool UseLocalScope { get; }
         public CancellationToken ClientCancellation { get; }
         public TaskCompletionSource<PsResult> TaskCompletionSource { get; }
     }

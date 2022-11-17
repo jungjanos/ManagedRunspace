@@ -12,9 +12,6 @@ namespace ManagedRunspacePool2
         private bool _disposedValue;
         private readonly Func<Runspace> _runspaceFactory;
 
-        //public string OwnerId { get; set; }
-        //public string Id { get; set; }
-
         public PsContext(Func<Runspace> runspaceFactory)
         {
             _runspaceFactory =
@@ -35,15 +32,18 @@ namespace ManagedRunspacePool2
                 _psRunspace.Open();
         }
 
-        // ToDo: examine whether to expose "useLocalScope" param
-        public PsResult Invoke(string psScript)
+        public PsResult Invoke(string psScript, bool useLocalScope)
         {
             using (var ps = PowerShell.Create())
             {
                 ps.Runspace = _psRunspace;
-                ps.AddScript(psScript);
 
-                Collection<PSObject> results = null;
+                if (useLocalScope)
+                    ps.AddScript(psScript, useLocalScope: useLocalScope);
+                else
+                    ps.AddScript(psScript);
+
+                Collection <PSObject> results = null;
                 object[] errors = null;
                 Exception exception = null;
 

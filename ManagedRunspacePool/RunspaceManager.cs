@@ -9,50 +9,52 @@ namespace ManagedRunspacePool2
         RunspaceProxy _runspaceProxy = null;
         PsInvocationQueue _psInvocationQueue = null;
         private bool _disposedValue;
+        private readonly CancellationToken _cancel;
 
         public string Name { get; }
         public RunspaceManagerSettings Settings { get; }
 
 
-        private RunspaceManager(string name, RunspaceManagerSettings settings = null)
+        private RunspaceManager(string name, RunspaceManagerSettings settings = null, CancellationToken cancel = default)
         {
             Name = name;
             Settings = settings ?? RunspaceManagerSettings.Defaults;
-
             _psInvocationQueue = new PsInvocationQueue();
+            _cancel = cancel;
+            _cancel.Register(() =>_psInvocationQueue.Complete());
         }
 
-        public async Task<PsResult> InvokeAsync(string script, CancellationToken cancel = default)
+        public async Task<PsResult> InvokeAsync(string script, bool useLocalScope = false, CancellationToken cancel = default)
         {
             cancel.ThrowIfCancellationRequested();
 
-            var details = new InvocationDetails(script, new TaskCompletionSource<PsResult>(), cancel);
+            var details = new InvocationDetails(script, useLocalScope, new TaskCompletionSource<PsResult>(), cancel);
 
             await _psInvocationQueue.QueueAsync(details, cancel);
 
             return await details.TaskCompletionSource.Task;
         }
 
-        public static RunspaceManager Create(string name, RunspaceManagerSettings settings = null)
+        public static RunspaceManager Create(string name, RunspaceManagerSettings settings = null, CancellationToken cancel = default)
         {
-            var obj = new RunspaceManager(name, settings);
+            var obj = new RunspaceManager(name, settings, cancel);
             obj.Start();
             return obj;
         }
 
-        private void Start(CancellationToken cancel = default)
+        private void Start()
         {
-            cancel.ThrowIfCancellationRequested();
+            _cancel.ThrowIfCancellationRequested();
 
             RenewRunspace();
 
             // insert cancellation, pin TCS
-            Task.Run(() => Process(cancel));
+            Task.Run(Process);
         }
 
         // ToDo: push cancellation, track queue completed !!!
         // catch exceptions
-        private async Task Process(CancellationToken cancel)
+        private async Task Process()
         {
             var renewTimer = WaitForNextRenew();
             var itemWaiter = WaitForNext();
@@ -86,13 +88,14 @@ namespace ManagedRunspacePool2
                             var script = invocationDetails.Script;
                             var tcs = invocationDetails.TaskCompletionSource;
                             var clientCancel = invocationDetails.ClientCancellation;
+                            bool localScopeSet = invocationDetails.UseLocalScope;
 
                             if (clientCancel.IsCancellationRequested)                            
                                 tcs.TrySetCanceled(clientCancel);
                             
                             else
                             {
-                                var result = _runspaceProxy.Invoke(script);
+                                var result = _runspaceProxy.Invoke(script, localScopeSet);
                                 tcs.SetResult(result);
                             }
                         }

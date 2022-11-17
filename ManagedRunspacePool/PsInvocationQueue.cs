@@ -37,6 +37,8 @@ namespace ManagedRunspacePool2
             }
         }
 
+        public void Complete() => _channel.Writer.TryComplete();
+
         public bool TryDequeue(out InvocationDetails item)
             => _channel.Reader.TryRead(out item);
 

@@ -1,5 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Win32;
 using System.Diagnostics;
+using System.Linq;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -47,21 +51,21 @@ namespace Tests
                     Trace.WriteLine("Waiter completed");
                     waiter = GetWaiter();
                 }
-                
+
                 if (itemavailable.IsCompleted)
                 {
                     var item = await itemavailable;
                     Trace.WriteLine($"Reader completed with {item}");
                     itemavailable = ReadNext();
                 }
-                
+
                 if (finish.IsCompleted)
                 {
                     await finish;
                     Trace.WriteLine($"Queue completed");
                     break;
                 }
-            }            
+            }
 
             async Task GetWaiter() => await Task.Delay(500);
 
@@ -112,7 +116,7 @@ namespace Tests
 
                 if (finish.IsCompleted)
                 {
-                    if (finish.IsFaulted)                    
+                    if (finish.IsFaulted)
                         await finish;
 
                     Trace.WriteLine($"Queue completed");
@@ -150,7 +154,7 @@ namespace Tests
         {
             var channel = Channel.CreateBounded<int>(new BoundedChannelOptions(10) { FullMode = BoundedChannelFullMode.Wait });
             channel.Writer.Complete();
-            
+
             await Assert.ThrowsExceptionAsync<ChannelClosedException>(() => channel.Reader.ReadAsync().AsTask());
         }
 
@@ -161,7 +165,30 @@ namespace Tests
             channel.Writer.Complete();
             bool result = await channel.Reader.WaitToReadAsync();
             Trace.Write(result);
-            Assert.IsFalse(result);            
+            Assert.IsFalse(result);
+        }
+
+        [TestMethod]
+        public void Executing_in_local_scope()
+        {
+            var rs = RunspaceFactory.CreateRunspace(InitialSessionState.CreateDefault2());
+            rs.Open();
+            var ps = PowerShell.Create();
+            ps.Runspace = rs;
+
+            ps.AddScript("$a = 5; Write-Output $a", useLocalScope: true);
+            var res1 = ps.Invoke();
+            ps.Dispose();
+
+
+            var ps2 = PowerShell.Create();
+            ps2.Runspace = rs;
+
+            ps2.AddScript("Write-Output $a", useLocalScope: true);
+            var res2 = ps2.Invoke();
+            ps2.Dispose();
+
+            Assert.IsNull(res2.First());
         }
     }
 }

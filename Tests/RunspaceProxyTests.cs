@@ -23,13 +23,13 @@ namespace Tests
         {
             using (var mrs = RunspaceProxy.Create("owner1", DateTimeOffset.Now))
             {
-                var result = mrs.Invoke("gci");
+                var result = mrs.Invoke("gci", true);
                 Trace.WriteLine($"\"gci\" => {result.Results.Count} items");
 
-                var result2 = mrs.Invoke("will get errors");
+                var result2 = mrs.Invoke("will get errors", false);
 
-                mrs.Invoke($"$a = 5");
-                var result3 = mrs.Invoke("$a");
+                mrs.Invoke($"$a = 5", false);
+                var result3 = mrs.Invoke("$a", true);
 
                 Assert.AreEqual(5, (int)result3.Results.First().ImmediateBaseObject);
             }

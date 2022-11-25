@@ -12,13 +12,13 @@ namespace ManagedRunspacePool2
         private readonly CancellationToken _cancel;
 
         public string Name { get; }
-        public RunspaceManagerSettings Settings { get; }
+        public ManagedRunspaceSettings Settings { get; }
 
 
-        private RunspaceManager(string name, RunspaceManagerSettings settings = null, CancellationToken cancel = default)
+        private RunspaceManager(string name, ManagedRunspaceSettings settings = null, CancellationToken cancel = default)
         {
             Name = name;
-            Settings = settings ?? RunspaceManagerSettings.Defaults;
+            Settings = settings ?? ManagedRunspaceSettings.Defaults;
             _psInvocationQueue = new PsInvocationQueue();
             _cancel = cancel;
 
@@ -51,7 +51,7 @@ namespace ManagedRunspacePool2
         }
 
 
-        public static RunspaceManager Create(string name, RunspaceManagerSettings settings = null, CancellationToken cancel = default)
+        public static RunspaceManager Create(string name, ManagedRunspaceSettings settings = null, CancellationToken cancel = default)
         {
             var obj = new RunspaceManager(name, settings, cancel);
             obj.Start();

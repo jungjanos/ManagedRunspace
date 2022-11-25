@@ -3,10 +3,10 @@ using System.Management.Automation.Runspaces;
 
 namespace ManagedRunspacePool2
 {
-    public class RunspaceManagerSettings
+    public class ManagedRunspaceSettings
     {
-        public static RunspaceManagerSettings Defaults 
-            => new RunspaceManagerSettings 
+        public static ManagedRunspaceSettings Defaults 
+            => new ManagedRunspaceSettings 
             { 
                 RenewInterval = null,
                 RunspaceFactory = null,

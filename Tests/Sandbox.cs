@@ -214,7 +214,7 @@ namespace Tests
 
             var cts = new CancellationTokenSource(2000);
 
-            using (var manager = RunspaceManager.Create("manager1", new RunspaceManagerSettings
+            using (var manager = RunspaceManager.Create("manager1", new ManagedRunspaceSettings
             {
                 InitScript = "$init= 5",
                 ClosingScript = "$closed = $true",

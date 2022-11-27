@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{EDE20E11-8910-43A5-829E-D68E92165D82}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{EDE20E11-8910-43A5-829E-D68E92165D82}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedRunspacePool", "ManagedRunspacePool\ManagedRunspacePool.csproj", "{ABA698CC-8A63-43C8-8F44-3DAC31A24C40}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ManagedRunspacePool", "ManagedRunspacePool\ManagedRunspacePool.csproj", "{ABA698CC-8A63-43C8-8F44-3DAC31A24C40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedRunspace2", "ManagedRunspace2\ManagedRunspace2.csproj", "{51C3AF42-DED3-4CA6-A8C9-94DC0DA392A9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{ABA698CC-8A63-43C8-8F44-3DAC31A24C40}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABA698CC-8A63-43C8-8F44-3DAC31A24C40}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABA698CC-8A63-43C8-8F44-3DAC31A24C40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51C3AF42-DED3-4CA6-A8C9-94DC0DA392A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51C3AF42-DED3-4CA6-A8C9-94DC0DA392A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51C3AF42-DED3-4CA6-A8C9-94DC0DA392A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51C3AF42-DED3-4CA6-A8C9-94DC0DA392A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

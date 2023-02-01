@@ -4,7 +4,7 @@ using System.Management.Automation;
 
 namespace ManagedRunspacePool2
 {
-    [Serializable]
+    [Serializable]    
     public class PsResult
     {
         public PsResult(IList<PSObject> results, IList<object> errors, Exception exception = null)

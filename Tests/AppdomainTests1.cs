@@ -1,8 +1,10 @@
 using ManagedRunspacePool2;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
@@ -403,11 +405,40 @@ namespace Tests
             var resultProxy = proxy.GetResult();
 
             //var result = await resultProxy.Result; => Exception
-            
+
             //Test method Tests.AppdomainTests2.Return_wrapped_hot_task threw exception: 
             //System.Runtime.Serialization.SerializationException:
             //Type 'System.Threading.Tasks.Task`1' in assembly 'mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
             //is not marked as serializable.
         }
+
+        [TestMethod]
+        public async Task Marshalling_LargeValueObj()
+        {
+            var t = typeof(TypeWithLargeValue);
+            var ads = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(t.Assembly.Location), };
+            AppDomain ad1 = AppDomain.CreateDomain("ad1", null, ads);
+            var proxy = ad1.CreateInstanceAndUnwrap(t.Assembly.FullName, t.FullName) as TypeWithLargeValue;
+
+            var sw = Stopwatch.StartNew();
+            var value = proxy.Value;
+            Trace.WriteLine($"Ellapsed: {sw.ElapsedMilliseconds} ms"); // ~22sec
+            sw.Stop();
+        }
+
+
+        public class TypeWithLargeValue : MarshalByRefObject
+        {
+            public Dictionary<string, string>[] Value { get; set; }
+
+            public TypeWithLargeValue()
+             => Value = Enumerable.Range(1, 50_000).Select(_ => GetDict()).ToArray();
+
+            Dictionary<string, string> GetDict()
+                => Enumerable
+                    .Range(1, 100)
+                    .ToDictionary(i => $"{i}_ajajjajajjaj338gbgggj", i => $"{Guid.NewGuid()}_{Guid.NewGuid()}");
+        }
+
     }
 }

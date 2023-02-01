@@ -24,7 +24,9 @@ namespace Tests
             {
                 var tasks = Enumerable.Range(1, 100).Select(
                     _ =>
-                    Task.Run<PsResult>(async () => await manager.InvokeAsync("gci"))
+                    //Task.Run<PsResult>(async () => await manager.InvokeAsync("gci")) // <- FAST
+                    // Task.Run<PsResult>(async () => await manager.InvokeAsync("Get-Process")) //<- SLOW!!!!!!
+                    Task.Run<PsResult>(async () => await manager.InvokeAsync("Get-Process | select Name,Id")) //<- FAST!!!!!!
                     );
 
                 var results = await Task.WhenAll(tasks);

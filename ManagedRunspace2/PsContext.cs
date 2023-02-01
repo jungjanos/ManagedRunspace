@@ -21,15 +21,19 @@ namespace ManagedRunspace2
 
         public void Init()
         {
-            _psRunspace = _runspaceFactory();
+            try { _psRunspace = _runspaceFactory(); }
+            catch (Exception ex) { throw new ManagedRunsapceException(ManagedRunsapceException.ErrorType.RunspaceInitialization, "Failed to create runspace from factory", ex);}
 
             var state = _psRunspace.RunspaceStateInfo.State;
 
             if (state != RunspaceState.BeforeOpen && state != RunspaceState.Opened)
-                throw new InvalidPowerShellStateException($"Encountered {state} on Runspace. Opened or BeforeOpen state expected");
+                throw new ManagedRunsapceException(ManagedRunsapceException.ErrorType.RunspaceInitialization, $"Created runspace was in unexpected state: {state}");
 
             if (_psRunspace.RunspaceStateInfo.State == RunspaceState.BeforeOpen)
-                _psRunspace.Open();
+            {
+                try { _psRunspace.Open(); }
+                catch (Exception ex) { throw new ManagedRunsapceException(ManagedRunsapceException.ErrorType.RunspaceInitialization, "Failed to open runspace", ex); }
+            }
         }
 
         public PsResult Invoke(Script script)

@@ -34,10 +34,11 @@ namespace ManagedRunspace2
             var ads = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(_activatedType.Assembly.Location), };
             var adName = ComposeAppDomainName(ownerKey, timestamp);
 
-            AppDomain appDomain = AppDomain.CreateDomain(adName, null, ads);
+            AppDomain appDomain = null;            
+            try { appDomain = AppDomain.CreateDomain(adName, null, ads); } 
+            catch (Exception ex) { throw new ManagedRunsapceException(ManagedRunsapceException.ErrorType.RunspaceProxyCreation, $"Failed to create AppDomain: {adName}", ex); }
 
             PsContext proxy = null;
-
             try
             {
                 proxy = appDomain.CreateInstanceAndUnwrap(
@@ -53,21 +54,21 @@ namespace ManagedRunspace2
                     null,
                     null
                     ) as PsContext;
-
+            
+            
                 proxy.Init();
-
                 return new RunspaceProxy(proxy, appDomain, ownerKey, adName);
-            }
-            catch
+            }            
+            catch (Exception ex)
             {
                 proxy?.Dispose();
                 AppDomain.Unload(appDomain);
-                throw;
+                throw new ManagedRunsapceException(ManagedRunsapceException.ErrorType.RunspaceProxyCreation, "Failed to create remote proxy", ex);
             }
         }
 
         static string ComposeAppDomainName(string ownerKey, DateTimeOffset timestamp)
-            => $"{ownerKey}.{timestamp.ToUnixTimeMilliseconds()}";
+            => $"{ownerKey ?? throw new ArgumentNullException(ownerKey)}.{timestamp.ToUnixTimeMilliseconds()}";
 
 
         public PsResult Invoke(Script script)

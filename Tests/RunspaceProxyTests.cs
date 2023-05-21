@@ -10,16 +10,20 @@ namespace Tests
     public class RunspaceProxyTests
     {
         [TestMethod]
-        public void Create_managed_runspace()
+        public void Create_RunspaceProxy()
         {
-            using (var mrs = RunspaceProxy.Create("owner1", DateTimeOffset.Now))
+            var now = DateTimeOffset.Now;
+            using (var mrs1 = RunspaceProxy.Create("owner1", now))
+            using (var mrs2 = RunspaceProxy.Create("owner2", now))
             {
 
             }
+            
+            // TODO: understand why 2x RunspaceProxy can be created with the same ownername/timestamp (owner1-now, owner1-now)
         }
 
         [TestMethod]
-        public void Invoke_script()
+        public void Invoke_script_on_RunspaceProxy()
         {
             using (var mrs = RunspaceProxy.Create("owner1", DateTimeOffset.Now))
             {

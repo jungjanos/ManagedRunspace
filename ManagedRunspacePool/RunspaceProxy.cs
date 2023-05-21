@@ -5,6 +5,9 @@ using System.Reflection;
 
 namespace ManagedRunspacePool2
 {
+    /// <summary>
+    /// Encapsulates a RemoteRunspace
+    /// </summary>
     public class RunspaceProxy : IDisposable
     {
         private bool _disposedValue;
@@ -13,7 +16,13 @@ namespace ManagedRunspacePool2
         RemoteRunspace _proxy;
         AppDomain _appDomain;
 
+        /// <summary>
+        /// Owners name. Owner's name must be unique
+        /// </summary>
         public string Owner { get; }
+        /// <summary>
+        /// Unique generated name of the RunspaceProxy. Includes timespamp.
+        /// </summary>
         public string Name { get; }
         public DateTimeOffset Created { get; }
         public DateTimeOffset LastUsed { get; set; }
@@ -27,15 +36,15 @@ namespace ManagedRunspacePool2
             Created = created;
         }
 
-        public static RunspaceProxy Create(string ownerKey, DateTimeOffset timestamp, Func<Runspace> runspaceFactory = null)
+        public static RunspaceProxy Create(string ownerName, DateTimeOffset timestamp, Func<Runspace> runspaceFactory = null)
         {
-            ownerKey =
-                !string.IsNullOrWhiteSpace(ownerKey)
-                ? ownerKey
-                : throw new ArgumentNullException(nameof(ownerKey));
+            ownerName =
+                !string.IsNullOrWhiteSpace(ownerName)
+                ? ownerName
+                : throw new ArgumentNullException(nameof(ownerName));
 
             var ads = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(_activatedType.Assembly.Location), };
-            var adName = ComposeAppDomainName(ownerKey, timestamp);
+            var adName = ComposeAppDomainName(ownerName, timestamp);
 
             AppDomain appDomain = AppDomain.CreateDomain(adName, null, ads);
 
@@ -59,7 +68,7 @@ namespace ManagedRunspacePool2
 
                 proxy.Init(); 
 
-                return new RunspaceProxy(proxy, appDomain, ownerKey, adName, timestamp);
+                return new RunspaceProxy(proxy, appDomain, ownerName, adName, timestamp);
             }
             catch
             {
@@ -72,7 +81,9 @@ namespace ManagedRunspacePool2
         static string ComposeAppDomainName(string ownerKey, DateTimeOffset timestamp)
             => $"{ownerKey}.{timestamp.ToUnixTimeMilliseconds()}";
 
-
+        /// <summary>
+        /// Invokes script on the encapsulated remote Runspace
+        /// </summary>        
         public PsResult Invoke(Script script)                    
             => _proxy.Invoke(script);        
 

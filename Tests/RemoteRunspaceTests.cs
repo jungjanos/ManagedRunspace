@@ -60,9 +60,11 @@ namespace Tests
             Trace.WriteLine($"Returned {result.Results.Count} results");
             proxy.Dispose();
             AppDomain.Unload(ad1);
+
+            Assert.AreEqual(1, result.Results.Count);
         }
         [TestMethod] // Works!!!
-        public void Invoke_script_on_runspace_wrapper_custom_runspace()
+        public void Invoke_script_on_RemoteRunspace_runspace()
         {
             // create appdomain, create and use proxy
             var t = typeof(RemoteRunspace);
@@ -94,6 +96,8 @@ namespace Tests
             Trace.WriteLine($"Returned {result.Results.Count} results");
             proxy.Dispose();
             AppDomain.Unload(ad1);
+
+            Assert.AreEqual(1, result.Results.Count);
         }
     }
 }

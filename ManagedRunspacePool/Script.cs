@@ -2,6 +2,9 @@
 
 namespace ManagedRunspacePool2
 {
+    /// <summary>
+    /// models the script to be executed. 
+    /// </summary>
     [Serializable]
     public class Script
     {

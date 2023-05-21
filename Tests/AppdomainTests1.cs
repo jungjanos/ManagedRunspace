@@ -103,7 +103,7 @@ namespace Tests
 
             var baseDir = Thread.GetDomain().BaseDirectory;
             var ads = new AppDomainSetup
-            {
+            { 
                 ApplicationBase = baseDir,
             };
 
@@ -212,6 +212,9 @@ namespace Tests
             // ~2,46KB per proxy
 
 
+            for (int i = 0; i < proxy_anchor.Length; i++)            
+                proxy_anchor[i] = null;            
+
             // unload the appdomains
             foreach (var ad in appdomain_anchor)
                 AppDomain.Unload(ad);
@@ -223,7 +226,7 @@ namespace Tests
             long allocations_after_unloading_appdomains = GC.GetTotalMemory(true);
             Trace.WriteLine($"Current allocation (bytes): {allocations_after_unloading_appdomains}");
 
-            // memory went down 616MB => 85MB
+            // memory went down 616MB => 34MB
             // why not to baseline (~5,8MB) ?? 
         }
     }

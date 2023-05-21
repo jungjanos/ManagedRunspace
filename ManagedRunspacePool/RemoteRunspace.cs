@@ -6,13 +6,13 @@ using System.Management.Automation.Runspaces;
 
 namespace ManagedRunspacePool2
 {
-    public class PsContext : MarshalByRefObject, IDisposable
+    public class RemoteRunspace : MarshalByRefObject, IDisposable
     {
         Runspace _psRunspace;
         private bool _disposedValue;
         private readonly Func<Runspace> _runspaceFactory;
 
-        public PsContext(Func<Runspace> runspaceFactory)
+        public RemoteRunspace(Func<Runspace> runspaceFactory)
         {
             _runspaceFactory =
                 runspaceFactory

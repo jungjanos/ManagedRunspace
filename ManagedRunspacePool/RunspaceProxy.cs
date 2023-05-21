@@ -8,9 +8,9 @@ namespace ManagedRunspacePool2
     public class RunspaceProxy : IDisposable
     {
         private bool _disposedValue;
-        static readonly Type _activatedType = typeof(PsContext);
+        static readonly Type _activatedType = typeof(RemoteRunspace);
 
-        PsContext _proxy;
+        RemoteRunspace _proxy;
         AppDomain _appDomain;
 
         public string Owner { get; }
@@ -18,7 +18,7 @@ namespace ManagedRunspacePool2
         public DateTimeOffset Created { get; }
         public DateTimeOffset LastUsed { get; set; }
 
-        private RunspaceProxy(PsContext proxy, AppDomain appDomain, string owner, string name, DateTimeOffset created)
+        private RunspaceProxy(RemoteRunspace proxy, AppDomain appDomain, string owner, string name, DateTimeOffset created)
         {
             _proxy = proxy;
             _appDomain = appDomain;
@@ -39,7 +39,7 @@ namespace ManagedRunspacePool2
 
             AppDomain appDomain = AppDomain.CreateDomain(adName, null, ads);
 
-            PsContext proxy = null;
+            RemoteRunspace proxy = null;
 
             try
             {
@@ -55,7 +55,7 @@ namespace ManagedRunspacePool2
                     },
                     null,
                     null
-                    ) as PsContext;
+                    ) as RemoteRunspace;
 
                 proxy.Init(); 
 

@@ -9,13 +9,13 @@ using System.Reflection;
 namespace Tests
 {
     [TestClass]
-    public class PsContextTests
+    public class RemoteRunspaceTests
     {
         [TestMethod]
         public void Remote_activate_runspace_wrapper()
         {
             // create appdomain, create and use proxy
-            var t = typeof(PsContext);
+            var t = typeof(RemoteRunspace);
             var ads = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(t.Assembly.Location), };
             AppDomain ad1 = AppDomain.CreateDomain("ad1", null, ads);
             var proxy = ad1.CreateInstanceAndUnwrap(
@@ -27,7 +27,7 @@ namespace Tests
                 new object[] { null },
                 null,
                 null
-                ) as PsContext;
+                ) as RemoteRunspace;
 
             proxy.Init();
 
@@ -39,7 +39,7 @@ namespace Tests
         public void Invoke_script_on_runspace_wrapper()
         {
             // create appdomain, create and use proxy
-            var t = typeof(PsContext);
+            var t = typeof(RemoteRunspace);
             var ads = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(t.Assembly.Location), };
             AppDomain ad1 = AppDomain.CreateDomain("ad1", null, ads);
             var proxy = ad1.CreateInstanceAndUnwrap(
@@ -51,7 +51,7 @@ namespace Tests
                 new object[] { null },
                 null,
                 null
-                ) as PsContext;
+                ) as RemoteRunspace;
 
             proxy.Init();
 
@@ -65,7 +65,7 @@ namespace Tests
         public void Invoke_script_on_runspace_wrapper_custom_runspace()
         {
             // create appdomain, create and use proxy
-            var t = typeof(PsContext);
+            var t = typeof(RemoteRunspace);
             var ads = new AppDomainSetup { ApplicationBase = Path.GetDirectoryName(t.Assembly.Location), };
             AppDomain ad1 = AppDomain.CreateDomain("ad1", null, ads);
             var proxy = ad1.CreateInstanceAndUnwrap(
@@ -85,7 +85,7 @@ namespace Tests
                 },
                 null,
                 null
-                ) as PsContext;
+                ) as RemoteRunspace;
 
             proxy.Init();
 

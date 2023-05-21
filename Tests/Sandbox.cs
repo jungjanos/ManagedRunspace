@@ -1,6 +1,5 @@
 ﻿using ManagedRunspacePool2;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -196,7 +195,7 @@ namespace Tests
         //[TestMethod]
         //public async Task RunspaceManager_with_Init_and_ClosingScript()
         //{
-        //    using (var manager = RunspaceManager.Create("manager1", new RunspaceManagerSettings
+        //    using (var manager = RunspaceAgent.Create("manager1", new RunspaceManagerSettings
         //    {
         //        InitScript = "$init= $true",
         //        ClosingScript = "$closed = $true",
@@ -214,7 +213,7 @@ namespace Tests
 
             var cts = new CancellationTokenSource(2000);
 
-            using (var manager = RunspaceManager.Create("manager1", new ManagedRunspaceSettings
+            using (var manager = RunspaceAgent.Create("manager1", new RunspaceAgentSettings
             {
                 InitScript = "$init= 5",
                 ClosingScript = "$closed = $true",

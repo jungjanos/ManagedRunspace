@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace ManagedRunspacePool2
 {
+    /// <summary>
+    /// Producer-consumer queue to sequentialize incoming requests comming from different threads and to take away control from client code  
+    /// </summary>
     public class PsInvocationQueue
     {
         Channel<InvocationContext> _channel;

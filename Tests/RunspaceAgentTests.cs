@@ -6,27 +6,27 @@ using System.Threading.Tasks;
 namespace Tests
 {
     [TestClass]
-    public class RunspaceManagerTests
+    public class RunspaceAgentTests
     {
         [TestMethod]
         public async Task Create()
         {
-            var manager = RunspaceManager.Create("manager1");
+            var agent1 = RunspaceAgent.Create("agent1");
 
-            var results = await manager.InvokeAsync("Get-Host");
+            var results = await agent1.InvokeAsync("Get-Host");
             var result = results.Results.First();
         }
 
         [TestMethod]
         public async Task RunParallel()
         {
-            using (var manager = RunspaceManager.Create("manager1"))
+            using (var agent1 = RunspaceAgent.Create("agent1"))
             {
                 var tasks = Enumerable.Range(1, 100).Select(
                     _ =>
-                    //Task.Run<PsResult>(async () => await manager.InvokeAsync("gci")) // <- FAST
-                    // Task.Run<PsResult>(async () => await manager.InvokeAsync("Get-Process")) //<- SLOW!!!!!!
-                    Task.Run<PsResult>(async () => await manager.InvokeAsync("Get-Process | select Name,Id")) //<- FAST!!!!!!
+                    //Task.Run<PsResult>(async () => await agent.InvokeAsync("gci")) // <- FAST
+                    // Task.Run<PsResult>(async () => await agent.InvokeAsync("Get-Process")) //<- SLOW!!!!!!
+                    Task.Run<PsResult>(async () => await agent1.InvokeAsync("Get-Process | select Name,Id")) //<- FAST!!!!!!
                     );
 
                 var results = await Task.WhenAll(tasks);
@@ -36,10 +36,10 @@ namespace Tests
         [TestMethod]
         public async Task Scripts_by_default_are_using_global_scope()
         {
-            using (var manager = RunspaceManager.Create("manager1"))
+            using (var agent = RunspaceAgent.Create("agent1"))
             {
-                await manager.InvokeAsync("$a = 5; Write-Output $a");
-                var res2 = await manager.InvokeAsync("Write-Output $a");
+                await agent.InvokeAsync("$a = 5; Write-Output $a");
+                var res2 = await agent.InvokeAsync("Write-Output $a");
 
                 Assert.AreEqual(5, res2.Results[0].ImmediateBaseObject);
             }

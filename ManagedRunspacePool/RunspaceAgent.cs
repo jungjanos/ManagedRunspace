@@ -4,7 +4,11 @@ using System.Threading.Tasks;
 
 namespace ManagedRunspacePool2
 {
-    public class RunspaceManager : IDisposable
+    /// <summary>
+    /// Provides an interface to execute scripts. Takes on the house-keeping tasks for the encapsulated runspace(s) 
+    /// according to its settings
+    /// </summary>
+    public class RunspaceAgent : IDisposable
     {
         RunspaceProxy _runspaceProxy = null;
         PsInvocationQueue _psInvocationQueue = null;
@@ -12,13 +16,13 @@ namespace ManagedRunspacePool2
         private readonly CancellationToken _cancel;
 
         public string Name { get; }
-        public ManagedRunspaceSettings Settings { get; }
+        public RunspaceAgentSettings Settings { get; }
 
 
-        private RunspaceManager(string name, ManagedRunspaceSettings settings = null, CancellationToken cancel = default)
+        private RunspaceAgent(string name, RunspaceAgentSettings settings = null, CancellationToken cancel = default)
         {
             Name = name;
-            Settings = settings ?? ManagedRunspaceSettings.Defaults;
+            Settings = settings ?? RunspaceAgentSettings.Defaults;
             _psInvocationQueue = new PsInvocationQueue();
             _cancel = cancel;
 
@@ -28,12 +32,20 @@ namespace ManagedRunspacePool2
         // ToDo inconsistent cancelation results when
         // manager is already shutting down but receives invocation
         // invocation is already in the queue but manager deceides to shut down
+
+        /// <summary>
+        /// Called by client code for script execution. Thread safe
+        /// </summary>
+        /// <param name="script"></param>
+        /// <param name="useLocalScope"></param>
+        /// <param name="cancel">for client side Task-cancellation</param>
+        /// <returns></returns>
         public async Task<PsResult> InvokeAsync(string script, bool useLocalScope = false, CancellationToken cancel = default)
         {
             var tcs = new TaskCompletionSource<PsResult>();
 
             if (_cancel.IsCancellationRequested) // Manager is shutting down, ingest is closed 
-                tcs.SetException(new InvalidOperationException($"{nameof(RunspaceManager)} is already shutting down"));
+                tcs.SetException(new InvalidOperationException($"{nameof(RunspaceAgent)} is already shutting down"));
 
             else if (cancel.IsCancellationRequested) // client originated cancellation            
                 tcs.SetCanceled();
@@ -44,16 +56,16 @@ namespace ManagedRunspacePool2
                 var queuingSuccess = await _psInvocationQueue.QueueAsync(details, cancel);
 
                 if (!queuingSuccess)
-                    tcs.SetException(new InvalidOperationException($"{nameof(RunspaceManager)} is already shutting down"));
+                    tcs.SetException(new InvalidOperationException($"{nameof(RunspaceAgent)} is already shutting down"));
             }
 
             return await tcs.Task;
         }
 
 
-        public static RunspaceManager Create(string name, ManagedRunspaceSettings settings = null, CancellationToken cancel = default)
+        public static RunspaceAgent Create(string name, RunspaceAgentSettings settings = null, CancellationToken cancel = default)
         {
-            var obj = new RunspaceManager(name, settings, cancel);
+            var obj = new RunspaceAgent(name, settings, cancel);
             obj.Start();
             return obj;
         }
@@ -136,7 +148,7 @@ namespace ManagedRunspacePool2
             
             Task<bool> WaitForNext() => _psInvocationQueue.WaitToReadAsync().AsTask(); // ToDo Do we need AsTask() ??? Any chance for double awaition?            
 
-            // wait for processing abortion deadline. (RunspaceManager's cancel + grace period) 
+            // wait for processing abortion deadline. (RunspaceAgent's cancel + grace period) 
             Task GetAbortWaiter()
             {
                 var tcs = new TaskCompletionSource<bool>();
@@ -174,7 +186,7 @@ namespace ManagedRunspacePool2
         private void TryAbortInvocations()
         {
             while(_psInvocationQueue.TryDequeue(out InvocationContext invocation))            
-                invocation.TaskCompletionSource.TrySetException(new TaskCanceledException($"Invocation processing aborted due to {nameof(RunspaceManager)} shutting down"));
+                invocation.TaskCompletionSource.TrySetException(new TaskCanceledException($"Invocation processing aborted due to {nameof(RunspaceAgent)} shutting down"));
         }
 
         protected virtual void Dispose(bool disposing)
